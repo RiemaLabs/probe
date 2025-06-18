@@ -10,6 +10,8 @@ import (
 )
 
 type ProbeInterfaceRegistry struct {
+	cosmosCodecTypes.InterfaceRegistry
+
 	interfaceNames map[string]reflect.Type
 	interfaceImpls map[reflect.Type]interfaceMap
 	implInterfaces map[reflect.Type]reflect.Type

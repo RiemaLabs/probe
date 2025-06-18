@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/DefiantLabs/probe/client"
+	"github.com/RiemaLabs/probe/client"
 	coretypes "github.com/cometbft/cometbft/rpc/core/types"
 	grpctypes "github.com/cosmos/cosmos-sdk/types/grpc"
 	txTypes "github.com/cosmos/cosmos-sdk/types/tx"

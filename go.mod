@@ -1,4 +1,4 @@
-module github.com/DefiantLabs/probe
+module github.com/RiemaLabs/probe
 
 go 1.23.6
 
@@ -231,6 +231,5 @@ require (
 
 replace (
 	github.com/CosmWasm/wasmd => github.com/RiemaLabs/wasmd v0.55.0-thunderbolt.alpha.1
-	github.com/DefiantLabs/probe/client => ./client
 	github.com/cosmos/cosmos-sdk => github.com/RiemaLabs/cosmos-sdk v0.53.0-thunderbolt.alpha.2
 )

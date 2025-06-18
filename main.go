@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/DefiantLabs/probe/client"
-	querier "github.com/DefiantLabs/probe/query"
+	"github.com/RiemaLabs/probe/client"
+	querier "github.com/RiemaLabs/probe/query"
 	cosmosTypes "github.com/cosmos/cosmos-sdk/types"
 	cquery "github.com/cosmos/cosmos-sdk/types/query"
 )

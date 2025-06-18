@@ -5,7 +5,7 @@ package query
 import (
 	"fmt"
 
-	"github.com/DefiantLabs/probe/client"
+	"github.com/RiemaLabs/probe/client"
 	"github.com/cosmos/cosmos-sdk/types/query"
 	txTypes "github.com/cosmos/cosmos-sdk/types/tx"
 )

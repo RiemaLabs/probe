@@ -194,7 +194,7 @@ func TestProbeIntegrationMainnet(t *testing.T) {
 		}
 	})
 
-	t.Run("TestWasmQuery", func(t *testing.T) {
+	t.Run("Test_WasmQuery", func(t *testing.T) {
 		query := querier.WasmQuery{Client: cl, Options: &querier.WasmQueryOptions{ContractAddress: "bc1ps8g24q9g59tk5tt8kvwxcve88lnrmk7dy5qlgl2w64s0sentuclqpujmwq"}}
 		balance, err := query.QueryCw20Balance("bc1pxu05753kc0jlc8dazxq9zhscdg48sq6hy5j5ayzxdftthwd633tsh8ph6z")
 		require.NoError(t, err, "Failed to get balance")

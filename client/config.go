@@ -4,6 +4,7 @@ package client
 
 import (
 	"github.com/CosmWasm/wasmd/x/wasm"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/taproot"
 	sdkTypes "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -36,15 +37,15 @@ var (
 		vesting.AppModuleBasic{},
 		wasm.AppModuleBasic{},
 	}
+
+	DefaultCustomMsgTypeRegistry = map[string]sdkTypes.Msg{
+		"/cosmos.crypto.PubKey": &taproot.PubKey{},
+	}
 )
 
 type ChainClientConfig struct {
-	Key                   string                  `json:"key" yaml:"key"`
 	ChainID               string                  `json:"chain-id" yaml:"chain-id"`
 	RPCAddr               string                  `json:"rpc-addr" yaml:"rpc-addr"`
-	AccountPrefix         string                  `json:"account-prefix" yaml:"account-prefix"`
-	KeyringBackend        string                  `json:"keyring-backend" yaml:"keyring-backend"`
-	KeyDirectory          string                  `json:"key-directory" yaml:"key-directory"`
 	Debug                 bool                    `json:"debug" yaml:"debug"`
 	Timeout               string                  `json:"timeout" yaml:"timeout"`
 	OutputFormat          string                  `json:"output-format" yaml:"output-format"`

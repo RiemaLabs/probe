@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/RiemaLabs/probe/logger"
@@ -77,6 +78,9 @@ func NewRPCClient(addr string, timeout time.Duration, debug bool) (*rpchttp.HTTP
 	if debug {
 		httpClient.Transport = &loggingRoundTripper{httpClient.Transport}
 	}
+
+	addr = strings.TrimSuffix(addr, "/")
+
 	rpcClient, err := rpchttp.NewWithClient(addr, "/websocket", httpClient)
 	if err != nil {
 		return nil, err

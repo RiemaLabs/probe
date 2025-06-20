@@ -14,9 +14,9 @@ import (
 	txTypes "github.com/cosmos/cosmos-sdk/types/tx"
 )
 
-func TestProbeIntegrationDevnet(t *testing.T) {
-	os.Setenv("CHAIN_ID", "thunderbolt-devnet")
-	os.Setenv("RPC_SERVER", "http://51.161.87.8:36657")
+func TestProbeIntegrationMainnet(t *testing.T) {
+	os.Setenv("CHAIN_ID", "thunderbolt")
+	os.Setenv("RPC_SERVER", "http://148.113.217.153:26657")
 
 	logger.InitLogger("debug", false, os.Stdout)
 
@@ -129,38 +129,32 @@ func TestProbeIntegrationDevnet(t *testing.T) {
 	})
 
 	t.Run("Test_TxsPagination", func(t *testing.T) {
-		// 35 Txs in this block.
-		testHeight := int64(444897)
+		// 28 Txs in this block.
+		testHeight := int64(251113)
 		query := querier.Query{Client: cl, Options: &querier.QueryOptions{Height: testHeight}}
 		txResponse0, err := querier.TxsRPC(&query, testHeight, &txTypes.GetTxsEventRequest{OrderBy: txTypes.OrderBy_ORDER_BY_UNSPECIFIED, Page: 1, Limit: 10, Query: "tx.height=" + fmt.Sprintf("%d", testHeight)}, cl.Codec)
 		require.NoError(t, err, "Failed to get transactions")
 		assert.NotNil(t, txResponse0, "Transaction response should not be nil")
 		assert.Equal(t, 10, len(txResponse0.Txs), "First page should have 10 transactions")
-		assert.Equal(t, uint64(35), txResponse0.Pagination.Total, "Total count should be 35")
+		assert.Equal(t, uint64(28), txResponse0.Pagination.Total, "Total count should be 28")
 
 		txResponse1, err := querier.TxsRPC(&query, testHeight, &txTypes.GetTxsEventRequest{OrderBy: txTypes.OrderBy_ORDER_BY_UNSPECIFIED, Page: 2, Limit: 10, Query: "tx.height=" + fmt.Sprintf("%d", testHeight)}, cl.Codec)
 		require.NoError(t, err, "Failed to get transactions")
 		assert.NotNil(t, txResponse1, "Transaction response should not be nil")
 		assert.Equal(t, 10, len(txResponse1.Txs), "Second page should have 10 transactions")
-		assert.Equal(t, uint64(35), txResponse1.Pagination.Total, "Total count should be 35")
+		assert.Equal(t, uint64(28), txResponse1.Pagination.Total, "Total count should be 28")
 
 		txResponse2, err := querier.TxsRPC(&query, testHeight, &txTypes.GetTxsEventRequest{OrderBy: txTypes.OrderBy_ORDER_BY_UNSPECIFIED, Page: 3, Limit: 10, Query: "tx.height=" + fmt.Sprintf("%d", testHeight)}, cl.Codec)
 		require.NoError(t, err, "Failed to get transactions")
 		assert.NotNil(t, txResponse2, "Transaction response should not be nil")
-		assert.Equal(t, 10, len(txResponse2.Txs), "Third page should have 10 transactions")
-		assert.Equal(t, uint64(35), txResponse2.Pagination.Total, "Total count should be 35")
-
-		txResponse3, err := querier.TxsRPC(&query, testHeight, &txTypes.GetTxsEventRequest{OrderBy: txTypes.OrderBy_ORDER_BY_UNSPECIFIED, Page: 4, Limit: 10, Query: "tx.height=" + fmt.Sprintf("%d", testHeight)}, cl.Codec)
-		require.NoError(t, err, "Failed to get transactions")
-		assert.NotNil(t, txResponse3, "Transaction response should not be nil")
-		assert.Equal(t, 5, len(txResponse3.Txs), "Fourth page should have 5 transactions")
-		assert.Equal(t, uint64(35), txResponse3.Pagination.Total, "Total count should be 35")
+		assert.Equal(t, 8, len(txResponse2.Txs), "Third page should have 5 transactions")
+		assert.Equal(t, uint64(28), txResponse2.Pagination.Total, "Total count should be 28")
 
 		fmt.Printf("Transactions Pagination Test Passed - Found %d transactions\n", len(txResponse0.Txs))
 	})
 
 	t.Run("Test_TxsPagination", func(t *testing.T) {
-		testHeight := int64(444897)
+		testHeight := int64(251113)
 		query := querier.Query{Client: cl, Options: &querier.QueryOptions{Height: testHeight}}
 
 		txResponse, err := querier.TxsAtHeightRPC(&query, testHeight, cl.Codec)
@@ -168,9 +162,9 @@ func TestProbeIntegrationDevnet(t *testing.T) {
 		require.NoError(t, err, "Failed to get transactions")
 		assert.NotNil(t, txResponse, "Transaction response should not be nil")
 
-		assert.Equal(t, uint64(35), txResponse.Total, "Total count should be 35")
-		assert.Equal(t, int(35), len(txResponse.Txs), "Total txs count should be 35")
-		assert.Equal(t, int(35), len(txResponse.TxResponses), "Total tx responses count should be 35")
+		assert.Equal(t, uint64(28), txResponse.Total, "Total count should be 28")
+		assert.Equal(t, int(28), len(txResponse.Txs), "Total txs count should be 28")
+		assert.Equal(t, int(28), len(txResponse.TxResponses), "Total tx responses count should be 28")
 	})
 
 	t.Run("Test_TransactionsWasmExecute", func(t *testing.T) {
@@ -183,7 +177,6 @@ func TestProbeIntegrationDevnet(t *testing.T) {
 		require.NoError(t, err, "Failed to get transactions")
 		assert.NotNil(t, txResponse, "Transaction response should not be nil")
 
-		// tx: 1ADCFD5F340236C1DFDC07B0E1BAB6ED4C3126D06904FFF56AE32A92DFBA868E
 		assert.NotZero(t, txResponse.Pagination.Total, "Total count should be greater than 0")
 
 		if len(txResponse.Txs) > 0 {
@@ -202,7 +195,7 @@ func TestProbeIntegrationDevnet(t *testing.T) {
 	})
 
 	t.Run("TestWasmQuery", func(t *testing.T) {
-		query := querier.WasmQuery{Client: cl, Options: &querier.WasmQueryOptions{ContractAddress: "bc1pnaze3k0mgk8gqtmw9es8hpuusrqaupa62dq3j744vnla874cvv0qakrmqh"}}
+		query := querier.WasmQuery{Client: cl, Options: &querier.WasmQueryOptions{ContractAddress: "bc1ps8g24q9g59tk5tt8kvwxcve88lnrmk7dy5qlgl2w64s0sentuclqpujmwq"}}
 		balance, err := query.QueryCw20Balance("bc1pxu05753kc0jlc8dazxq9zhscdg48sq6hy5j5ayzxdftthwd633tsh8ph6z")
 		require.NoError(t, err, "Failed to get balance")
 		assert.NotNil(t, balance, "Balance should not be nil")

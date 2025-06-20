@@ -14,19 +14,42 @@ import (
 	txTypes "github.com/cosmos/cosmos-sdk/types/tx"
 )
 
-// TxsAtHeightRPC Get Transactions for the given block height.
+// TxsAtHeightRPC Get All Transactions for the given block height regardless of pagination.
 // Other query options can be specified with the GetTxsEventRequest.
 //
 // This version only uses the 26657 RPC endpoint (CometBFT).
 func TxsAtHeightRPC(q *Query, height int64, codec client.Codec) (*txTypes.GetTxsEventResponse, error) {
-	if q.Options.Pagination == nil {
-		pagination := &query.PageRequest{Limit: 100}
-		q.Options.Pagination = pagination
+	orderBy := txTypes.OrderBy_ORDER_BY_ASC
+	req := &txTypes.GetTxsEventRequest{OrderBy: orderBy, Page: 1, Limit: 100, Query: "tx.height=" + fmt.Sprintf("%d", height)}
+	res, err := TxsRPC(q, height, req, codec)
+	if err != nil {
+		return nil, err
 	}
-	orderBy := txTypes.OrderBy_ORDER_BY_UNSPECIFIED
 
-	req := &txTypes.GetTxsEventRequest{OrderBy: orderBy, Page: q.Options.Pagination.Offset, Limit: q.Options.Pagination.Limit, Query: "tx.height=" + fmt.Sprintf("%d", height)}
-	return TxsRPC(q, height, req, codec)
+	if res.Total > 100 {
+		totalPages := res.Total / 100
+		txs := res.Txs
+		txResponses := res.TxResponses
+		for i := uint64(2); i <= totalPages; i++ {
+			req := &txTypes.GetTxsEventRequest{OrderBy: orderBy, Page: i, Limit: 100, Query: "tx.height=" + fmt.Sprintf("%d", height)}
+			res, err := TxsRPC(q, height, req, codec)
+			if err != nil {
+				return nil, err
+			}
+			txs = append(txs, res.Txs...)
+			txResponses = append(txResponses, res.TxResponses...)
+		}
+		return &txTypes.GetTxsEventResponse{
+			Txs:         txs,
+			TxResponses: txResponses,
+			Pagination: &query.PageResponse{
+				NextKey: nil,
+				Total:   res.Total,
+			},
+			Total: res.Total,
+		}, nil
+	}
+	return res, nil
 }
 
 // TxRPC Get Transactions for the given block height.

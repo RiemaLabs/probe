@@ -159,6 +159,20 @@ func TestProbeIntegrationDevnet(t *testing.T) {
 		fmt.Printf("Transactions Pagination Test Passed - Found %d transactions\n", len(txResponse0.Txs))
 	})
 
+	t.Run("Test_TxsPagination", func(t *testing.T) {
+		testHeight := int64(444897)
+		query := querier.Query{Client: cl, Options: &querier.QueryOptions{Height: testHeight}}
+
+		txResponse, err := querier.TxsAtHeightRPC(&query, testHeight, cl.Codec)
+
+		require.NoError(t, err, "Failed to get transactions")
+		assert.NotNil(t, txResponse, "Transaction response should not be nil")
+
+		assert.Equal(t, uint64(35), txResponse.Total, "Total count should be 35")
+		assert.Equal(t, uint64(35), len(txResponse.Txs), "Total txs count should be 35")
+		assert.Equal(t, uint64(35), len(txResponse.TxResponses), "Total tx responses count should be 35")
+	})
+
 	t.Run("Test_TransactionsWasmExecute", func(t *testing.T) {
 		testHeight := int64(401967)
 		query := querier.Query{Client: cl, Options: &querier.QueryOptions{Height: testHeight}}

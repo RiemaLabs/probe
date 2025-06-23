@@ -5,7 +5,7 @@ package client
 import (
 	"fmt"
 
-	probeCodecTypes "github.com/DefiantLabs/probe/client/codec/types"
+	probeCodecTypes "github.com/RiemaLabs/probe/client/codec/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/codec/types"

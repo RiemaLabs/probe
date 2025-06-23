@@ -1,7 +1,7 @@
 package staking
 
 import (
-	probeQueryTypes "github.com/DefiantLabs/probe/query"
+	probeQueryTypes "github.com/RiemaLabs/probe/query"
 	queryTypes "github.com/cosmos/cosmos-sdk/types/query"
 	stakingTypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )

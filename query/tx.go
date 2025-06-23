@@ -1,52 +1,149 @@
-// APACHE NOTICE
-// Sourced with modifications from https://github.com/strangelove-ventures/lens
 package query
 
 import (
+	"encoding/hex"
 	"fmt"
+	"time"
 
-	"github.com/DefiantLabs/probe/client"
+	"github.com/RiemaLabs/probe/client"
+	"github.com/RiemaLabs/probe/utils"
+	coretypes "github.com/cometbft/cometbft/rpc/core/types"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/query"
 	txTypes "github.com/cosmos/cosmos-sdk/types/tx"
 )
 
-// TxRPC Get Transactions for the given block height.
+// TxsAtHeightRPC Get All Transactions for the given block height regardless of pagination.
 // Other query options can be specified with the GetTxsEventRequest.
 //
-// RPC endpoint is defined in cosmos-sdk: proto/cosmos/tx/v1beta1/service.proto,
-// See GetTxsEvent(GetTxsEventRequest) returns (GetTxsEventResponse)
+// This version only uses the 26657 RPC endpoint (CometBFT).
 func TxsAtHeightRPC(q *Query, height int64, codec client.Codec) (*txTypes.GetTxsEventResponse, error) {
-	if q.Options.Pagination == nil {
-		pagination := &query.PageRequest{Limit: 100}
-		q.Options.Pagination = pagination
+	orderBy := txTypes.OrderBy_ORDER_BY_ASC
+	req := &txTypes.GetTxsEventRequest{OrderBy: orderBy, Page: 1, Limit: 100, Query: "tx.height=" + fmt.Sprintf("%d", height)}
+	res, err := TxsRPC(q, height, req, codec)
+	if err != nil {
+		return nil, err
 	}
-	orderBy := txTypes.OrderBy_ORDER_BY_UNSPECIFIED
 
-	req := &txTypes.GetTxsEventRequest{Events: []string{"tx.height=" + fmt.Sprintf("%d", height)}, Pagination: q.Options.Pagination, OrderBy: orderBy}
-	return TxsRPC(q, req, codec)
+	if res.Total > 100 {
+		totalPages := res.Total / 100
+		txs := res.Txs
+		txResponses := res.TxResponses
+		for i := uint64(2); i <= totalPages; i++ {
+			req := &txTypes.GetTxsEventRequest{OrderBy: orderBy, Page: i, Limit: 100, Query: "tx.height=" + fmt.Sprintf("%d", height)}
+			res, err := TxsRPC(q, height, req, codec)
+			if err != nil {
+				return nil, err
+			}
+			txs = append(txs, res.Txs...)
+			txResponses = append(txResponses, res.TxResponses...)
+		}
+		return &txTypes.GetTxsEventResponse{
+			Txs:         txs,
+			TxResponses: txResponses,
+			Pagination: &query.PageResponse{
+				NextKey: nil,
+				Total:   res.Total,
+			},
+			Total: res.Total,
+		}, nil
+	}
+	return res, nil
 }
 
 // TxRPC Get Transactions for the given block height.
 // Other query options can be specified with the GetTxsEventRequest.
 //
-// RPC endpoint is defined in cosmos-sdk: proto/cosmos/tx/v1beta1/service.proto,
-// See GetTxsEvent(GetTxsEventRequest) returns (GetTxsEventResponse)
-func TxsRPC(q *Query, req *txTypes.GetTxsEventRequest, codec client.Codec) (*txTypes.GetTxsEventResponse, error) {
-	queryClient := txTypes.NewServiceClient(q.Client)
+// This version only uses the 26657 RPC endpoint (CometBFT).
+func TxsRPC(q *Query, height int64, req *txTypes.GetTxsEventRequest, codec client.Codec) (*txTypes.GetTxsEventResponse, error) {
 	ctx, cancel := q.GetQueryContext()
 	defer cancel()
 
-	res, err := queryClient.GetTxsEvent(ctx, req)
+	header, err := q.Client.RPCClient.Header(ctx, &height)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, tx := range res.GetTxs() {
-		// BUG: This function errors out on the first type error, meaning that the first message that fails ends the unpacking process
-		// Since TXs can have multiple messages, this means that we won't be able to process the messages that come after the first error
-		// We may want to pull out the unpacking logic into a separate function that can be called on each message individually but not fail hard
-		tx.UnpackInterfaces(codec.InterfaceRegistry)
+	timestamp := header.Header.Time
+
+	orderBy := ""
+	if req.OrderBy == txTypes.OrderBy_ORDER_BY_ASC {
+		orderBy = "asc"
+	} else if req.OrderBy == txTypes.OrderBy_ORDER_BY_DESC {
+		orderBy = "desc"
 	}
 
-	return res, nil
+	page := int(req.Page)
+	perPage := int(req.Limit)
+
+	txs, err := q.Client.RPCClient.TxSearch(ctx, req.Query, false, &page, &perPage, orderBy)
+	if err != nil {
+		return nil, err
+	}
+
+	nextKey := utils.MakeNextKey(req.Page, req.Limit, uint64(txs.TotalCount))
+
+	return BuildGetTxsEventResponse(timestamp, txs, codec.TxConfig.TxDecoder(), nextKey)
+}
+
+func BuildGetTxsEventResponse(
+	timestamp time.Time,
+	results *coretypes.ResultTxSearch,
+	decoder sdk.TxDecoder,
+	nextKey []byte,
+) (*txTypes.GetTxsEventResponse, error) {
+
+	txs := make([]*txTypes.Tx, 0, len(results.Txs))
+	txResponses := make([]*sdk.TxResponse, 0, len(results.Txs))
+	for _, r := range results.Txs {
+		tx, err := utils.TxBytesToProto(r.Tx, decoder)
+		if err != nil {
+			return nil, err
+		}
+
+		txs = append(txs, tx)
+		anyTx, err := codectypes.NewAnyWithValue(tx)
+		if err != nil {
+			return nil, err
+		}
+
+		raw := r.TxResult.Log
+		msgLogs, err := sdk.ParseABCILogs(raw)
+		if err != nil {
+			msgLogs = []sdk.ABCIMessageLog{{
+				MsgIndex: 0,
+				Log:      r.TxResult.Log,
+				Events:   sdk.StringifyEvents(r.TxResult.Events),
+			}}
+		}
+
+		dataHex := hex.EncodeToString(r.TxResult.Data)
+
+		txResp := &sdk.TxResponse{
+			Height:    r.Height,
+			TxHash:    r.Hash.String(),
+			Codespace: r.TxResult.Codespace,
+			Code:      r.TxResult.Code,
+			Data:      dataHex,
+			RawLog:    r.TxResult.Log,
+			Logs:      msgLogs,
+			Info:      r.TxResult.Info,
+			GasWanted: r.TxResult.GasWanted,
+			GasUsed:   r.TxResult.GasUsed,
+			Tx:        anyTx,
+			Timestamp: timestamp.Format(time.RFC3339),
+		}
+		txResponses = append(txResponses, txResp)
+	}
+
+	return &txTypes.GetTxsEventResponse{
+		Txs:         txs,
+		TxResponses: txResponses,
+		Pagination: &query.PageResponse{
+			NextKey: nextKey,
+			Total:   uint64(results.TotalCount),
+		},
+		Total: uint64(results.TotalCount),
+	}, nil
 }
